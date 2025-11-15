@@ -1,48 +1,53 @@
 """
-Database Schemas
+Database Schemas for Property Sale Website
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
+Each Pydantic model represents a collection in MongoDB. The collection name
+is the lowercase of the class name, e.g. Property -> "property".
 
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+These schemas are returned by the /schema endpoint and used for validation.
 """
 
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel, Field, EmailStr
+from typing import Optional, List
+from datetime import datetime
 
-# Example schemas (replace with your own):
+# Admin user for logging into the admin panel
+class AdminUser(BaseModel):
+    email: EmailStr = Field(..., description="Admin email")
+    password_hash: str = Field(..., description="BCrypt password hash")
+    name: Optional[str] = Field(None, description="Display name")
+    is_active: bool = Field(True, description="Active status")
 
-class User(BaseModel):
-    """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
-    """
-    name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+# Site-wide settings editable by admin
+class SiteSettings(BaseModel):
+    site_name: str = Field(..., description="Website name")
+    hero_headline: str = Field(..., description="Homepage hero headline")
+    hero_subtitle: Optional[str] = Field(None, description="Homepage hero subtitle")
+    contact_email: Optional[EmailStr] = Field(None, description="Contact email shown on site")
+    phone: Optional[str] = Field(None, description="Contact phone")
 
-class Product(BaseModel):
-    """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
-    """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
+# Property listed for sale
+class Property(BaseModel):
+    title: str = Field(..., description="Property title")
+    description: Optional[str] = Field(None, description="Property description")
+    price: float = Field(..., ge=0, description="Listing price in USD")
+    address: str = Field(..., description="Street address")
+    city: str = Field(..., description="City")
+    state: str = Field(..., description="State/Region")
+    country: str = Field(..., description="Country")
+    bedrooms: Optional[int] = Field(None, ge=0, description="Bedrooms")
+    bathrooms: Optional[float] = Field(None, ge=0, description="Bathrooms")
+    square_feet: Optional[int] = Field(None, ge=0, description="Area in sqft")
+    images: List[str] = Field(default_factory=list, description="Image URLs")
+    status: str = Field("available", description="available | pending | sold")
+    featured: bool = Field(False, description="Showcase on homepage")
+    listed_at: Optional[datetime] = Field(None, description="When listed")
 
-# Add your own schemas here:
-# --------------------------------------------------
-
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+# Offers made on properties
+class Offer(BaseModel):
+    property_id: str = Field(..., description="Related property _id as string")
+    buyer_name: str = Field(..., description="Buyer full name")
+    buyer_email: EmailStr = Field(..., description="Buyer email")
+    amount: float = Field(..., ge=0, description="Offer amount in USD")
+    message: Optional[str] = Field(None, description="Optional message")
+    status: str = Field("pending", description="pending | accepted | rejected")
